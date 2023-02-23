@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      #my-div {
+        width: 100%;
+        height: 100%;
+        background-color: black;
+        position: absolute;
+      }
+
+      .dot {
+        position: absolute;
+        border-radius: 50%;
+        background-color: white;
+        width: 10px;
+        height: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="my-div"></div>
+    <script>
+      function getPosition(dot) {
+        const rect = dot.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        return [x, y];
+      }
+
+      function updateDots() {
+        const dots = document.querySelectorAll('.dot');
+        const now = Date.now();
+
+        dots.forEach((dot) => {
+          let transformData = dot.transformData;
+          let [x, y] = getPosition(dot);
+
+          if (!transformData) {
+            const angle = Math.random() * 2 * Math.PI;
+            const speed = Math.random() * 0.002;
+            transformData = {
+              angle: angle,
+              speed: speed,
+              position: { x: x, y: y },
+            };
+            dot.transformData = transformData;
+          }
+
+          x += Math.cos(transformData.angle) * transformData.speed;
+          y += Math.sin(transformData.angle) * transformData.speed;
+
+          const maxX = window.innerWidth;
+          const maxY = window.innerHeight;
+
+          if (x < 0 || x > maxX) {
+            transformData.angle = Math.PI - transformData.angle;
+          }
+
+          if (y < 0 || y > maxY) {
+            transformData.angle = -transformData.angle;
+          }
+
+          const collidedDot = Array.from(dots).find((otherDot) => {
+            if (otherDot === dot) {
+              return false;
+            }
+
+            const [otherX, otherY] = getPosition(otherDot);
+            const dx = otherX - x;
+            const dy = otherY - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 20) {
+              return true;
+            }
+
+            return false;
+          });
+
+          if (collidedDot) {
+            const otherTransformData = collidedDot.transformData;
+            if (!otherTransformData) {
+              return;
+            }
+
+            const newAngle = Math.atan2(y - otherTransformData.position.y, x - otherTransformData.position.x);
+            const angle1 = newAngle - Math.PI / 2;
+            const angle2 = newAngle + Math.PI / 2;
+
+            transformData.angle = angle1;
+            otherTransformData.angle = angle2;
+          }
+
+          dot.transformData = transformData;
+          dot.style.left = `${x}px`;
+          dot.style.top = `${y}px`;
+        });
+
+        requestAnimationFrame(updateDots);
+      }
+
+      for (let i = 0; i < 100; i++) {
+  const dot = document.createElement('div');
+  dot.classList.add('dot');
+
+  // Set random initial position
+  dot.style.left = Math.floor(Math.random() * window.innerWidth) + 'px';
+  dot.style.top = Math.floor(Math.random() * window.innerHeight) + 'px';
+
+  document.getElementById('my-div').appendChild(dot);
+}
+
+
+      requestAnimationFrame(updateDots);
+    </script>
+  </body>
+</html>

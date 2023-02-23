@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Can you give me some dates please Dave?</title>
+    <style>
+        #poof {
+            font-size: 72px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <h1>Can you give me some dates please Dave?</h1>
+    <input type="date" id="date-picker" min="<?= date('Y-m-d') ?>" max="<?= date('Y') ?>-12-25">
+
+    <script>
+        var datePicker = document.getElementById("date-picker");
+        var header = document.querySelector("h1");
+        var poof = document.createElement("div");
+        poof.innerHTML = "Poof";
+        poof.id = "poof";
+        poof.style.display = "none";
+        document.body.appendChild(poof);
+
+        datePicker.addEventListener("click", function() {
+            header.style.display = "none";
+            datePicker.style.display = "none";
+            poof.style.display = "block";
+        });
+    </script>
+</body>
+</html>
