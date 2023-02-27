@@ -3,15 +3,48 @@
 <head>
   <title>Three.js Sphere and Box Example</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+</style>
+
 </head>
 <body>
   <script>
     // Create a scene
     const scene = new THREE.Scene();
 
+    function createGrid() {
+        const gridSize = 5000;
+        const gridSpacing = 100;
+        const gridColor = 0x808080;
+
+        const gridGeometry = new THREE.BufferGeometry();
+        const vertices = [];
+
+        for (let i = -gridSize; i <= gridSize; i += gridSpacing) {
+            vertices.push(i, 0, -gridSize, i, 0, gridSize);
+            vertices.push(-gridSize, 0, i, gridSize, 0, i);
+        }
+
+        gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+        const gridMaterial = new THREE.LineBasicMaterial({ color: gridColor });
+        const grid = new THREE.LineSegments(gridGeometry, gridMaterial);
+
+        return grid;
+    }
+
+    const grid = createGrid();
+    scene.add(grid);
+
+
     // Create a camera
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0, 300);
+    camera.position.set(0, 100, 100);
 
     // Create a renderer
     const renderer = new THREE.WebGLRenderer();
@@ -26,19 +59,239 @@
     scene.add(sphere);
 
     // Create a box and make it a child of the sphere
-    const boxWidth = 20;
-    const boxHeight = 1;
+    const boxWidth = 40;
+    const boxHeight = 3;
     const boxDepth = 20;
     const boxGeometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
     const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const box = new THREE.Mesh(boxGeometry, boxMaterial);
-    box.position.set(0, -10, 0);
+    box.position.set(0, 0, 0);
     sphere.add(box);
+
+
+    function UpdateCamera2() {
+      // Update camera position to maintain a distance of 100 units behind the sphere
+    const targetPosition = new THREE.Vector3(0, 0, 100);
+    const sphereWorldPosition = new THREE.Vector3();
+    sphere.getWorldPosition(sphereWorldPosition);
+    const cameraTargetPosition = sphereWorldPosition.clone().add(targetPosition);
+    camera.position.lerp(cameraTargetPosition, 0.1);
+
+    // Update camera rotation to look at the sphere
+    const targetQuaternion = new THREE.Quaternion();
+    sphere.getWorldQuaternion(targetQuaternion);
+    const cameraTargetQuaternion = targetQuaternion.clone();
+    const cameraQuaternion = camera.quaternion.clone();
+    cameraQuaternion.slerp(cameraTargetQuaternion, 0.1);
+    const cameraRotation = new THREE.Euler().setFromQuaternion(cameraQuaternion);
+    camera.setRotationFromEuler(cameraRotation);
+}
+
+
+function createVelocityLabel() {
+  const label = document.createElement('div');
+  label.style.position = 'absolute';
+  label.style.top = '10px';
+  label.style.right = '10px';
+  label.style.color = 'white';
+  label.style.fontSize = '18px';
+  label.innerHTML = 'Velocity: 0.000';
+
+  document.body.appendChild(label);
+
+  function updateLabel(velocity) {
+    label.innerHTML = `Velocity: ${velocity.x.toFixed(3)}, ${velocity.y.toFixed(3)}, ${velocity.z.toFixed(3)}`;
+  }
+
+  return updateLabel;
+}
+
+// Create the label
+const updateVelocityLabel = createVelocityLabel();
+
+
+// Set up variables for the sphere's position and velocity
+const spherePosition = new THREE.Vector3(0, 100, 0);
+const sphereVelocity = new THREE.Vector3(0, 0, -50);
+
+// Set up variables for the sphere's rotation
+const sphereQuaternion = new THREE.Quaternion();
+const sphereEuler = new THREE.Euler();
+const maxRollAngle = Math.PI / 6; // 30 degrees in radians
+const maxPitchAngle = Math.PI / 9; // 20 degrees in radians
+
+// Set up variables for handling keyboard input
+const keyState = {};
+document.addEventListener('keydown', (event) => {
+  keyState[event.code] = true;
+});
+document.addEventListener('keyup', (event) => {
+  keyState[event.code] = false;
+});
+
+function UpdateSphere(deltaTime) {
+
+    // Calculate the lift force based on the sphere's velocity
+    const liftForce = new THREE.Vector3(0, 0.05, 0);
+    liftForce.applyQuaternion(sphereQuaternion);
+    const yVelocity = sphereVelocity.dot(new THREE.Vector3(0, 1, 0));
+    const liftMagnitude = (yVelocity * yVelocity) * 0.8;
+    liftForce.multiplyScalar(liftMagnitude);
+
+    // Apply gravity and lift to the sphere's velocity
+    const gravity = new THREE.Vector3(0, -0.1, 0);
+    sphereVelocity.add(gravity).add(liftForce);
+
+
+    // Update the sphere's position based on its velocity
+    const sphereWorldPosition = new THREE.Vector3();
+    sphere.getWorldPosition(sphereWorldPosition);
+    spherePosition.copy(sphereWorldPosition);
+    spherePosition.add(sphereVelocity.clone().multiplyScalar(deltaTime));
+    sphere.position.copy(spherePosition);
+
+    // Update the sphere's rotation based on keyboard input
+    if (keyState['ArrowRight']) {
+        sphereEuler.z = Math.max(sphereEuler.z - deltaTime * Math.PI / 12, -maxRollAngle);
+    } else if (keyState['ArrowLeft']) {
+        sphereEuler.z = Math.min(sphereEuler.z + deltaTime * Math.PI / 12, maxRollAngle);
+    } else {
+        sphereEuler.z *= 0.95;
+    }
+    if (keyState['ArrowUp']) {
+        sphereEuler.x = Math.max(sphereEuler.x - deltaTime * Math.PI / 18, -maxPitchAngle);
+    } else if (keyState['ArrowDown']) {
+        sphereEuler.x = Math.min(sphereEuler.x + deltaTime * Math.PI / 18, maxPitchAngle);
+    } else {
+        sphereEuler.x *= 0.95;
+    }
+    sphereQuaternion.setFromEuler(sphereEuler);
+    sphere.quaternion.copy(sphereQuaternion);
+}
+
+function UpdateSphere2(deltaTime) {
+
+  // Calculate the lift force based on the sphere's velocity
+  const liftForce = new THREE.Vector3(0, 0.05, 0);
+  liftForce.applyQuaternion(sphereQuaternion);
+  const yVelocity = sphereVelocity.dot(new THREE.Vector3(0, 1, 0));
+  const liftMagnitude = (yVelocity * yVelocity) * 0.8;
+  liftForce.multiplyScalar(liftMagnitude);
+
+  // Calculate the thrust force based on the sphere's rotation
+  const thrustForce = new THREE.Vector3(0, 0, -1);
+  thrustForce.applyQuaternion(sphereQuaternion);
+  thrustForce.multiplyScalar(0.1);
+
+  // Calculate the drag force based on the sphere's velocity
+  const dragForce = sphereVelocity.clone();
+  dragForce.multiplyScalar(-0.01 * sphereVelocity.length());
+
+  // Calculate the net force on the sphere
+  const netForce = new THREE.Vector3();
+  netForce.add(thrustForce);
+  netForce.add(dragForce);
+  netForce.add(liftForce);
+
+  // Apply the net force to the sphere's velocity
+  sphereVelocity.add(netForce.clone().multiplyScalar(deltaTime));
+
+  // Apply gravity to the sphere's velocity
+  const gravity = new THREE.Vector3(0, -0.1, 0);
+  sphereVelocity.add(gravity.clone().multiplyScalar(deltaTime));
+
+  // Update the sphere's position based on its velocity
+  const sphereWorldPosition = new THREE.Vector3();
+  sphere.getWorldPosition(sphereWorldPosition);
+  spherePosition.copy(sphereWorldPosition);
+  spherePosition.add(sphereVelocity.clone().multiplyScalar(deltaTime));
+  sphere.position.copy(spherePosition);
+
+  // Update the sphere's rotation based on keyboard input
+  if (keyState['ArrowRight']) {
+    sphereQuaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -deltaTime));
+  }
+  if (keyState['ArrowLeft']) {
+    sphereQuaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), deltaTime));
+  }
+  if (keyState['ArrowUp']) {
+    sphereQuaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -deltaTime));
+  }
+  if (keyState['ArrowDown']) {
+    sphereQuaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), deltaTime));
+  }
+
+  // Set the sphere's quaternion to the updated quaternion
+  sphere.quaternion.copy(sphereQuaternion);
+}
+
+function UpdateSphere3(deltaTime) {
+
+    // Calculate the lift force based on the sphere's velocity
+    const liftForce = new THREE.Vector3(0, 0.05, 0);
+    liftForce.applyQuaternion(sphereQuaternion);
+    const yVelocity = sphereVelocity.dot(new THREE.Vector3(0, 1, 0));
+    const liftMagnitude = (yVelocity * yVelocity) * 0.8;
+    liftForce.multiplyScalar(liftMagnitude);
+
+    // Apply gravity and lift to the sphere's velocity
+    const gravity = new THREE.Vector3(0, -0.1, 0);
+    sphereVelocity.add(gravity).add(liftForce);
+
+    // Update the sphere's position based on its velocity
+    const sphereWorldPosition = new THREE.Vector3();
+    sphere.getWorldPosition(sphereWorldPosition);
+    spherePosition.copy(sphereWorldPosition);
+    spherePosition.add(sphereVelocity.clone().multiplyScalar(deltaTime));
+    sphere.position.copy(spherePosition);
+
+    // Update the sphere's rotation based on keyboard input
+    if (keyState['ArrowRight']) {
+        sphereEuler.z = Math.max(sphereEuler.z - deltaTime * Math.PI / 12, -maxRollAngle);
+        sphereEuler.y -= deltaTime * Math.PI / 60;
+    } else if (keyState['ArrowLeft']) {
+        sphereEuler.z = Math.min(sphereEuler.z + deltaTime * Math.PI / 12, maxRollAngle);
+        sphereEuler.y += deltaTime * Math.PI / 60;
+    } else {
+        sphereEuler.z *= 0.95;
+    }
+
+    if (keyState['ArrowUp']) {
+        sphereEuler.x = Math.max(sphereEuler.x - deltaTime * Math.PI / 18, -maxPitchAngle);
+        sphereEuler.z -= deltaTime * Math.PI / 180;
+    } else if (keyState['ArrowDown']) {
+        sphereEuler.x = Math.min(sphereEuler.x + deltaTime * Math.PI / 18, maxPitchAngle);
+        sphereEuler.z += deltaTime * Math.PI / 180;
+    } else {
+        sphereEuler.x *= 0.95;
+        if (Math.abs(sphereEuler.x) < 0.01) {
+            sphereEuler.x = 0;
+        }
+    }
+
+    sphereQuaternion.setFromEuler(sphereEuler);
+    sphere.quaternion.copy(sphereQuaternion);
+}
+
+
+
+    const clock = new THREE.Clock();
+    let prevTime = 0;
+
 
     // Render the scene
     function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
+
+        const elapsedTime = clock.getElapsedTime();
+        const deltaTime = elapsedTime - prevTime;
+        prevTime = elapsedTime;
+
+        UpdateSphere3( deltaTime );
+        UpdateCamera2();
+        updateVelocityLabel(sphereVelocity);
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
     }
     animate();
   </script>
