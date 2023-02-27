@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Three.js Sphere and Box Example</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <script>
+    // Create a scene
+    const scene = new THREE.Scene();
+
+    // Create a camera
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 300);
+
+    // Create a renderer
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Create a sphere
+    const sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere.position.set(0, 100, 0);
+    scene.add(sphere);
+
+    // Create a box and make it a child of the sphere
+    const boxWidth = 20;
+    const boxHeight = 1;
+    const boxDepth = 20;
+    const boxGeometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+    const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const box = new THREE.Mesh(boxGeometry, boxMaterial);
+    box.position.set(0, -10, 0);
+    sphere.add(box);
+
+    // Render the scene
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
