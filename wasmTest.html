@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebAssembly Calculation Test</title>
+</head>
+<body>
+  <h1>WebAssembly Calculation Test</h1>
+  <p>Enter two numbers to calculate:</p>
+  <input id="x" type="number" value="2">
+  <input id="y" type="number" value="3">
+  <button onclick="runCalculations()">Run Calculations</button>
+  <p>Results:</p>
+  <ul>
+    <li><span id="jsResult"></span> (JavaScript)</li>
+    <li><span id="wasmResult"></span> (WebAssembly)</li>
+  </ul>
+  <script>
+
+    // Load the WebAssembly module
+    // let wasmModule;
+    // const wasmModulePromise = fetch('calculation.wasm')
+    //   .then(response => response.arrayBuffer())
+    //   .then(bytes => WebAssembly.instantiate(bytes, {
+    //     env: {
+    //       memoryBase: 0,
+    //       tableBase: 0,
+    //       memory: new WebAssembly.Memory({ initial: 256 }),
+    //       table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' })
+    //     }
+    //   }))
+    //   .then(instance => {
+    //     wasmModule = instance.exports;
+    //   });
+
+    //   // JavaScript calculation function
+    //     function jsCalculation(x, y) {
+    //     let result = 0;
+    //     for (let i = 0; i < 1000000; i++) {
+    //         result += x * y + i;
+    //     }
+    //     return result;
+    //     }
+
+    async function Init() {
+    try {
+        const response = await fetch('calculation.wasm');
+        const bytes = await response.arrayBuffer();
+        const module = await WebAssembly.instantiate(bytes);
+        console.log(module.exports);
+    } catch (error) {
+        console.error(error);
+    }
+    }
+
+
+    // Run the calculations and update the UI
+    // async function runCalculations() {
+    //   const x = document.getElementById('x').valueAsNumber;
+    //   const y = document.getElementById('y').valueAsNumber;
+    //   const jsStartTime = performance.now();
+    //   const jsResult = jsCalculation(x, y);
+    //   const jsEndTime = performance.now();
+    //   const wasmStartTime = performance.now();
+    //   await wasmModulePromise;
+    //   const wasmResult = wasmModule._cppCalculation(x, y);
+    //   const wasmEndTime = performance.now();
+    //   document.getElementById('jsResult').textContent = `${jsResult} (took ${jsEndTime - jsStartTime} ms)`;
+    //   document.getElementById('wasmResult').textContent = `${wasmResult} (took ${wasmEndTime - wasmStartTime} ms)`;
+    // }
+
+    Init();
+  </script>
+</body>
+</html>

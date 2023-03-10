@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Three.js Cylinder Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script> -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/0.150.1/three.module.js",
+                "three/addons/": "https://threejs.org/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+
+        import * as THREE from 'three';
+        import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
+        const SHADOW_MAP_WIDTH = 2048, SHADOW_MAP_HEIGHT = 2048;
+        let SCREEN_WIDTH = window.innerWidth;
+			let SCREEN_HEIGHT = window.innerHeight;
+
+        // Create the scene, camera, and renderer
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        var renderer = new THREE.WebGLRenderer();
+        renderer.shadowMap.enabled = true;
+		renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Create the ground plane
+        var groundGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
+        var groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x808080,
+            roughness: 0.5,
+            metalness: 0.5
+        });
+        var ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        // ground.castShadow = true;
+        ground.receiveShadow = true;
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // Create the cylinder object
+        var cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 32);
+        var cylinderMaterial = new THREE.MeshStandardMaterial({ color: 0xbbbbbb });
+        
+        var cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+        cylinder.castShadow = true;
+        cylinder.receiveShadow = true;
+        cylinder.rotation.x = -Math.PI / 2;
+        cylinder.position.set(0, 0.5, 0); // Set the cylinder's position so it is centered on the ground
+        scene.add(cylinder);
+
+        // Position the camera
+        camera.position.y = 1;
+        camera.position.z = 5;
+
+
+        // Define variables to track the mouse position and camera position
+        var mouseX = 0;
+        var cameraAngle = 0;
+        var cameraZoomDelta = 0;
+        var previousMouseX = 0;
+        var isMouseDown = false;
+
+        function createDirectionalLight() {
+            // Create a directional light and set its position
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(0, 3, 0);
+            light.lookAt( new THREE.Vector3(0,0,0));
+
+            // Enable shadow casting for the light
+            light.castShadow = true;
+            
+            // Set the shadow map size and bias
+            light.shadow.mapSize.width = SHADOW_MAP_WIDTH;
+			light.shadow.mapSize.height = SHADOW_MAP_HEIGHT;
+            // light.shadow.bias = -0.001;
+
+            // Set the shadow camera settings
+            light.shadow.camera.near = 0.1;
+            light.shadow.camera.far = 100;
+            light.shadow.camera.left = -3;
+            light.shadow.camera.right = 3;
+            light.shadow.camera.top = 3;
+            light.shadow.camera.bottom = -3;
+
+            // Return the light object
+            return light;
+        }
+
+        function addDirectionalLightHelper(light) {
+           const helper = new THREE.DirectionalLightHelper(light, 5);
+            scene.add(helper);
+        }
+
+        let lightShadowMapViewer;
+
+        function createHUD( light ) {
+
+            lightShadowMapViewer = new ShadowMapViewer( light );
+            lightShadowMapViewer.position.x = 10;
+            lightShadowMapViewer.position.y = SCREEN_HEIGHT - ( SHADOW_MAP_HEIGHT / 4 ) - 10;
+            lightShadowMapViewer.size.width = SHADOW_MAP_WIDTH / 4;
+            lightShadowMapViewer.size.height = SHADOW_MAP_HEIGHT / 4;
+            lightShadowMapViewer.update();
+
+        }
+
+        function rotateCylinder(cylinder, angle) {
+            cylinder.rotateOnAxis(new THREE.Vector3(0, 1, 0), angle);
+        }
+
+        function update() {
+
+            var target = new THREE.Vector3(0, 0, 0);
+
+            // Calculate the camera position based on the camera angle
+            const dist = camera.position.distanceTo(target);
+            camera.position.set( target );
+            camera.rotateOnAxis( new THREE.Vector3( 0, 1, 0 ), mouseX );
+            let newPos = camera.getWorldDirection().multiplyScalar( dist ).add( target );
+            camera.position.set( newPos.x, newPos.y, newPos.z );
+
+            // Calculate the camera's target position (the world center) and update the camera's lookAt() function
+            camera.lookAt(target);
+
+            // Update the camera angle based on the distance the mouse has moved in the screen x axis
+            if (isMouseDown) {
+                var deltaMouseX = mouseX - previousMouseX;
+                cameraAngle += deltaMouseX * 0.5;
+                previousMouseX = mouseX;
+            }
+
+            rotateCylinder( cylinder, 0.1 );
+        }
+
+        // Add event listeners to track the mouse position
+        document.addEventListener('mousemove', onDocumentMouseMove, false);
+        function onDocumentMouseMove(event) {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        }
+
+        // Add event listeners to track when the mouse is down and up
+        var isMouseDown = false;
+        document.addEventListener('mousedown', function(event) {
+            isMouseDown = true;
+            previousMouseX = mouseX;
+        });
+        document.addEventListener('mouseup', function(event) {
+            isMouseDown = false;
+        });
+
+        document.addEventListener( 'mousewheel', function(event) {
+
+            // Calculate the new camera position based on the mouse wheel delta
+            const cameraZoomDelta = -event.deltaY * 0.001;
+            // Calculate the camera's target position (the world center) and update the camera's lookAt() function
+            var target = new THREE.Vector3(0, 0, 0);
+
+            var cameraDistance = camera.position.distanceTo(target);
+            var newCameraDistance = cameraDistance - cameraZoomDelta;
+            newCameraDistance = Math.max(newCameraDistance, 2); // limit minimum distance to 2
+            newCameraDistance = Math.min(newCameraDistance, 100); // limit maximum distance to 10
+            const newPosition = camera.position.subVectors(camera.position, target).normalize().multiplyScalar(newCameraDistance).add(target);
+            camera.position.set( newPosition.x, newPosition.y, newPosition.z );
+            camera.updateMatrixWorld();
+                console.log( newPosition ); 
+            
+            camera.lookAt(target);
+        }, false);
+
+
+
+        // Render the scene
+        function animate() {
+            requestAnimationFrame(animate);
+
+            update();
+            renderer.render(scene, camera);
+
+            if ( lightShadowMapViewer ) {
+                lightShadowMapViewer.render( renderer );
+            }
+        }
+
+        const sun = createDirectionalLight();
+        addDirectionalLightHelper( sun );
+        scene.add( sun );
+        // createHUD( sun );
+        animate();
+    </script>
+</body>
+</html>
