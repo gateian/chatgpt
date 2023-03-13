@@ -168,8 +168,9 @@ wheel.position.setY( 1 );
 
         }
 
-        function updateWheel(cylinder, angle) {
-            cylinder.rotateOnAxis(new THREE.Vector3(1, 0, 0), angle);
+        function updateWheel(wheel, angle) {
+            
+            wheel.rotateOnAxis(new THREE.Vector3(1, 0, 0), angle);
         }
 
         function update() {
