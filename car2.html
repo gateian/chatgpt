@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Three.js Cylinder Example</title>
+    <script src="/lib/ammo.js"></script>
     <style>
         body {
             margin: 0;
@@ -24,7 +25,30 @@
             }
         }
     </script>
-    <script type="module">
+    <script>
+        let physicsWorld;
+
+        Ammo().then( start )
+            
+        function start(){
+
+            setupPhysicsWorld();
+
+        }
+
+        function setupPhysicsWorld(){
+
+            let collisionConfiguration  = new Ammo.btDefaultCollisionConfiguration(),
+                dispatcher              = new Ammo.btCollisionDispatcher(collisionConfiguration),
+                overlappingPairCache    = new Ammo.btDbvtBroadphase(),
+                solver                  = new Ammo.btSequentialImpulseConstraintSolver();
+
+            physicsWorld           = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+            physicsWorld.setGravity(new Ammo.btVector3(0, -10, 0));
+
+        }
+    </script>
+    <!-- <script type="module">
 
         import * as THREE from 'three';
         import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
@@ -266,6 +290,7 @@ wheel.position.setY( 1 );
         scene.add( skyLight );
         // createHUD( sun );
         animate();
-    </script>
+    </script> -->
+    
 </body>
 </html>
